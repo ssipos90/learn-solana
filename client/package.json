@@ -9,11 +9,14 @@
   "keywords": [],
   "license": "MIT",
   "scripts": {
-    "start": "ts-node src/main.ts"
+    "sum": "ts-node src/main.ts -- sum",
+    "square": "ts-node src/main.ts -- square"
   },
   "dependencies": {
     "@solana/web3.js": "^1.64.0",
-    "mz": "^2.7.0"
+    "borsh": "^0.7.0",
+    "mz": "^2.7.0",
+    "yaml": "^2.1.3"
   },
   "devDependencies": {
     "@tsconfig/recommended": "^1.0.1",

@@ -8,10 +8,8 @@ case "$1" in
   "reset")
     rm -rf client/node_modules
     for deployed_program in $(solana program show --programs | grep '^[a-zA-Z0-9]\{44\}' | cut -d' ' -f1); do
-      if [[ $deployed_program != "Program" ]]; then
-        echo $program:
-        solana program close $deployed_program
-      fi
+      echo $program:
+      solana program close $deployed_program
     done
     rm -rf dist/program
     ;;
@@ -25,7 +23,7 @@ case "$1" in
   "build")
     for program in "${SOLANA_PROGRAMS[@]}"; do
       echo $program:
-      (cd "$program" && cargo build-sbf --sbf-out-dir=../dist/program)
+      (cd "$program" && cargo build-bpf --bpf-out-dir=../dist/program)
     done
     ;;
   "deploy")
@@ -34,9 +32,9 @@ case "$1" in
       (
         set eu
         cd "$program"
-        cargo build-sbf --sbf-out-dir=../dist/program
-        solana program deploy "dist/program/$program.so"
+        cargo build-bpf --bpf-out-dir=../dist/program
       )
+      solana program deploy "dist/program/$program.so"
     done
     ;;
 esac
