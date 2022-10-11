@@ -7,10 +7,10 @@ SOLANA_PROGRAMS=("sum" "square")
 case "$1" in
   "reset")
     rm -rf client/node_modules
-    for deployed_program in $(solana program show --programs); do
-
+    for deployed_program in $(solana program show --programs | grep '^[a-zA-Z0-9]\{44\}' | cut -d' ' -f1); do
       if [[ $deployed_program != "Program" ]]; then
-        solana program clone $deployed_program
+        echo $program:
+        solana program close $deployed_program
       fi
     done
     rm -rf dist/program
@@ -18,16 +18,19 @@ case "$1" in
   "clean")
     rm -rf client/node_modules
     for program in "${SOLANA_PROGRAMS[@]}"; do
+      echo $program:
       (cd "$program" && cargo clean)
     done
     ;;
   "build")
     for program in "${SOLANA_PROGRAMS[@]}"; do
+      echo $program:
       (cd "$program" && cargo build-sbf --sbf-out-dir=../dist/program)
     done
     ;;
   "deploy")
     for program in "${SOLANA_PROGRAMS[@]}"; do
+      echo $program:
       (
         set eu
         cd "$program"
