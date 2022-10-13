@@ -4,36 +4,6 @@ set -eu
 
 SOLANA_PROGRAMS=("sum" "square")
 
-if [ -z "${1+x}"]; then
-  cat << HEREDOC
-Usage: cicd [command]
-
-Available commands:
-  help    - shows this help.
-  reset   - runs \`solana program close\` for all programs and deletes them
-            from dist/program.
-  clean   - deletes dist/program and runs \`cargo clean\` in all program
-            directories.
-  build   - runs \`cargo build-bpf\` in all program directories outputting in
-            dist/program.
-  deploy  - runs the build command and runs \`solana program deploy\` for each
-            program.
-
-Registered programs:
-`echo ${SOLANA_PROGRAMS[@]} | tr ' ' '\n' | sed 's/^/  /'`
-HEREDOC
-else
-  case "$1" in
-    "reset") reset ;;
-    "clean") clean;;
-    "build") build ;;
-    "deploy")
-      build
-      deploy
-    ;;
-  esac
-fi
-
 function reset() {
   echo "resetting..."
 
@@ -65,8 +35,39 @@ function build () {
 
 function deploy () {
   echo "deploying..."
+
   for program in "${SOLANA_PROGRAMS[@]}"; do
     echo $program:
     solana program deploy "dist/program/$program.so"
   done
 }
+
+if [ -z "${1+x}" ]; then
+  cat << HEREDOC
+Usage: cicd [command]
+
+Available commands:
+  help    - shows this help.
+  reset   - runs \`solana program close\` for all programs and deletes them
+            from dist/program.
+  clean   - deletes dist/program and runs \`cargo clean\` in all program
+            directories.
+  build   - runs \`cargo build-bpf\` in all program directories outputting in
+            dist/program.
+  deploy  - runs the build command and runs \`solana program deploy\` for each
+            program.
+
+Registered programs:
+`echo ${SOLANA_PROGRAMS[@]} | tr ' ' '\n' | sed 's/^/  /'`
+HEREDOC
+else
+  case "$1" in
+    "reset") reset ;;
+    "clean") clean ;;
+    "build") build ;;
+    "deploy")
+      build
+      deploy
+    ;;
+  esac
+fi

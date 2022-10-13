@@ -45,13 +45,7 @@ interface Config {
     localKeypair,
   };
 
-  const repl = startREPL({
-    prompt: 'uv> ',
-    terminal: true,
-    useGlobal: false
-  });
-
-  Object.assign(repl.context, {
+  const context: Record<string, Function> = {
     async run(name: string, seed: string) {
       const programStuff = programs.get(name);
       if (!programStuff) {
@@ -89,13 +83,22 @@ interface Config {
       );
       console.log("Recieved airdrop.");
     },
+  };
+
+  console.log('Available functions: ', Object.keys(context).join(', '));
+
+  const repl = startREPL({
+    prompt: 'command> ',
+    terminal: true,
+    useGlobal: false,
   });
+
+  Object.assign(repl.context, context);
 })())
   .catch(e => console.error(e));
 
 async function getLocalAccount(): Promise<Keypair> {
   const configYml = await readFile(CONFIG_FILE_PATH, { encoding: 'utf8' });
-  console.log(configYml);
   const keypairPath = yaml.parse(configYml).keypair_path;
 
   return createKeypairFromFile(keypairPath);
