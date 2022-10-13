@@ -4,37 +4,69 @@ set -eu
 
 SOLANA_PROGRAMS=("sum" "square")
 
-case "$1" in
-  "reset")
-    rm -rf client/node_modules
-    for deployed_program in $(solana program show --programs | grep '^[a-zA-Z0-9]\{44\}' | cut -d' ' -f1); do
-      echo $program:
-      solana program close $deployed_program
-    done
-    rm -rf dist/program
+if [ -z "${1+x}"]; then
+  cat << HEREDOC
+Usage: cicd [command]
+
+Available commands:
+  help    - shows this help.
+  reset   - runs \`solana program close\` for all programs and deletes them
+            from dist/program.
+  clean   - deletes dist/program and runs \`cargo clean\` in all program
+            directories.
+  build   - runs \`cargo build-bpf\` in all program directories outputting in
+            dist/program.
+  deploy  - runs the build command and runs \`solana program deploy\` for each
+            program.
+
+Registered programs:
+`echo ${SOLANA_PROGRAMS[@]} | tr ' ' '\n' | sed 's/^/  /'`
+HEREDOC
+else
+  case "$1" in
+    "reset") reset ;;
+    "clean") clean;;
+    "build") build ;;
+    "deploy")
+      build
+      deploy
     ;;
-  "clean")
-    rm -rf client/node_modules
-    for program in "${SOLANA_PROGRAMS[@]}"; do
-      echo $program:
-      (cd "$program" && cargo clean)
-    done
-    ;;
-  "build")
-    for program in "${SOLANA_PROGRAMS[@]}"; do
-      echo $program:
-      (cd "$program" && cargo build-bpf --bpf-out-dir=../dist/program)
-    done
-    ;;
-  "deploy")
-    for program in "${SOLANA_PROGRAMS[@]}"; do
-      echo $program:
-      (
-        set eu
-        cd "$program"
-        cargo build-bpf --bpf-out-dir=../dist/program
-      )
-      solana program deploy "dist/program/$program.so"
-    done
-    ;;
-esac
+  esac
+fi
+
+function reset() {
+  echo "resetting..."
+
+  rm -rf dist/program
+  for deployed_program in $(solana program show --programs | grep '^[a-zA-Z0-9]\{44\}' | cut -d' ' -f1); do
+    echo $program:
+    solana program close $deployed_program
+  done
+}
+
+function clean () {
+  echo "cleaning..."
+
+  rm -rf dist/program
+  for program in "${SOLANA_PROGRAMS[@]}"; do
+    echo $program:
+    (cd "$program" && cargo clean)
+  done
+}
+
+function build () {
+  echo "building..."
+
+  for program in "${SOLANA_PROGRAMS[@]}"; do
+    echo $program:
+    (cd "$program" && cargo build-bpf --bpf-out-dir=../dist/program)
+  done
+}
+
+function deploy () {
+  echo "deploying..."
+  for program in "${SOLANA_PROGRAMS[@]}"; do
+    echo $program:
+    solana program deploy "dist/program/$program.so"
+  done
+}

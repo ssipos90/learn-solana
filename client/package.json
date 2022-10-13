@@ -9,8 +9,7 @@
   "keywords": [],
   "license": "MIT",
   "scripts": {
-    "sum": "ts-node src/main.ts -- sum",
-    "square": "ts-node src/main.ts -- square"
+    "repl": "ts-node src/main.ts"
   },
   "dependencies": {
     "@solana/web3.js": "^1.64.0",
@@ -23,7 +22,7 @@
     "@types/eslint": "^8.4.6",
     "@types/eslint-plugin-prettier": "^3.1.0",
     "@types/mz": "^2.7.4",
-    "@types/node": "^18.8.4",
+    "@types/node": "^18.8.5",
     "@typescript-eslint/eslint-plugin": "^5.40.0",
     "@typescript-eslint/parser": "^5.40.0",
     "eslint": "^8.25.0",

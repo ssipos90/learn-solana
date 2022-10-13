@@ -9,6 +9,7 @@ import {
 import { readFile } from "fs/promises";
 import { createKeypairFromFile } from "./util";
 import { programs } from "./programs";
+import { start as startREPL } from "repl";
 
 const CONFIG_FILE_PATH = path.resolve(
   os.homedir(),
@@ -26,29 +27,12 @@ const PROGRAM_PATH = path.resolve(
 );
 
 interface Config {
-  clientPubkey: PublicKey,
   connection: Connection,
   localKeypair: Keypair,
-  programId: PublicKey,
-  programKeypair: Keypair,
 }
 
 ((async function main() {
   console.log("Launching client.");
-
-  const programName = process.argv[3];
-  if (typeof programName !== 'string') {
-    console.error(`Invalid argument, missing program name.`);
-    process.exit(1);
-  }
-
-  const programStuff = programs.get(programName);
-  if (!programStuff) {
-    console.error(`Invalid program name ${programName}.`);
-    process.exit(2);
-  }
-
-  console.log(`Running program ${programName}.`);
 
   const connection: Connection = new Connection("https://api.devnet.solana.com", 'confirmed');
   console.log("Connected to network.");
@@ -56,37 +40,56 @@ interface Config {
   const localKeypair: Keypair = await getLocalAccount();
   console.log("Retrieved local keypair.");
 
-  await connection.confirmTransaction(
-    await connection.requestAirdrop(
-      localKeypair.publicKey,
-      LAMPORTS_PER_SOL
-    )
-  );
-  console.log("Recieved airdrop.");
-
-  const [programKeypair, programId]: [Keypair, PublicKey] = await getProgram(
-    programName
-  );
-  console.log("Retrieved program keys.");
-
-  const clientPubkey: PublicKey = await configureClientAccount({
-    accountSpaceSize: programStuff.size,
-    connection,
-    localKeypair,
-    programId,
-    seed: "test1",
-  });
-  console.log("Configured client accounts.");
-
   const config = {
-    clientPubkey,
     connection,
     localKeypair,
-    programId,
-    programKeypair,
   };
 
-  await pingProgram(config, programName);
+  const repl = startREPL({
+    prompt: 'uv> ',
+    terminal: true,
+    useGlobal: false
+  });
+
+  Object.assign(repl.context, {
+    async run(name: string, seed: string) {
+      const programStuff = programs.get(name);
+      if (!programStuff) {
+        throw new Error(`Invalid program name ${name}.`);
+      }
+
+      console.log(`Running program ${name}.`);
+
+      const keypair = await getProgram(name);
+
+      console.log(`Program ID: ${keypair.publicKey.toBase58()}`);
+
+      const program: Program = {
+        name,
+        keypair
+      };
+
+      const clientPubkey: PublicKey = await configureClientAccount({
+        accountSpaceSize: programStuff.size,
+        connection,
+        localKeypair,
+        programId: program.keypair.publicKey,
+        seed,
+      });
+      console.log("Configured client accounts.");
+
+      await pingProgram(config, clientPubkey, program);
+    },
+    async airdrop() {
+      await connection.confirmTransaction(
+        await connection.requestAirdrop(
+          localKeypair.publicKey,
+          LAMPORTS_PER_SOL
+        )
+      );
+      console.log("Recieved airdrop.");
+    },
+  });
 })())
   .catch(e => console.error(e));
 
@@ -98,15 +101,10 @@ async function getLocalAccount(): Promise<Keypair> {
   return createKeypairFromFile(keypairPath);
 }
 
-async function getProgram(programName: string): Promise<[Keypair, PublicKey]> {
-  const programKeypair = await createKeypairFromFile(
-    path.join(PROGRAM_PATH, programName + '-keypair.json')
+async function getProgram(name: string): Promise<Keypair> {
+  return await createKeypairFromFile(
+    path.join(PROGRAM_PATH, name + '-keypair.json')
   );
-  const programId = programKeypair.publicKey;
-
-  console.log(`Program ID: ${programId.toBase58()}`);
-
-  return [programKeypair, programId];
 }
 
 interface ClientAccountConfig {
@@ -154,12 +152,15 @@ async function configureClientAccount({
   return clientPubkey;
 }
 
-async function pingProgram(config: Config, programName: string) {
-  console.log(`Pinging program ${programName}...`);
+interface Program {
+  name: string;
+  keypair: Keypair;
+}
 
+async function pingProgram(config: Config, clientPubkey: PublicKey, program: Program) {
   const instruction = new TransactionInstruction({
-    keys: [{ pubkey: config.clientPubkey, isSigner: false, isWritable: true }],
-    programId: config.programId,
+    keys: [{ pubkey: clientPubkey, isSigner: false, isWritable: true }],
+    programId: program.keypair.publicKey,
     data: Buffer.alloc(0),
   });
 
