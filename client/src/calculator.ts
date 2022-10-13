@@ -1,5 +1,5 @@
 import { serialize } from "borsh";
-import { u32, u8, struct, Structure } from '@solana/buffer-layout';
+import { s32, u8, struct, Structure } from '@solana/buffer-layout';
 
 class Calculator {
   value = 0;
@@ -32,5 +32,5 @@ interface CalculatorInstruction {
 
 export const calculatorInstructionLayout: Structure<CalculatorInstruction> = struct([
   u8('operation'),
-  u32('value'),
+  s32('value'),
 ]);
