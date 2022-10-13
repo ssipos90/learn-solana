@@ -8,8 +8,8 @@ import {
 } from "@solana/web3.js";
 import { readFile } from "fs/promises";
 import { createKeypairFromFile } from "./util";
-import { programs } from "./programs";
 import { start as startREPL } from "repl";
+import { calculator, calculatorInstructionLayout, CalculatorInstructionOperation} from "./calculator";
 
 const CONFIG_FILE_PATH = path.resolve(
   os.homedir(),
@@ -31,6 +31,11 @@ interface Config {
   localKeypair: Keypair,
 }
 
+interface Program {
+  clientPubkey: PublicKey,
+  programPubkey: PublicKey,
+}
+
 ((async function main() {
   console.log("Launching client.");
 
@@ -46,33 +51,29 @@ interface Config {
   };
 
   const context: Record<string, Function> = {
-    async run(name: string, seed: string) {
-      const programStuff = programs.get(name);
-      if (!programStuff) {
-        throw new Error(`Invalid program name ${name}.`);
-      }
+    async run(seed: string, operation: CalculatorInstructionOperation, value: number) {
 
-      console.log(`Running program ${name}.`);
+      const programKeypair = await getProgram('calculator');
 
-      const keypair = await getProgram(name);
-
-      console.log(`Program ID: ${keypair.publicKey.toBase58()}`);
-
-      const program: Program = {
-        name,
-        keypair
-      };
+      console.log(`Program ID: ${programKeypair.publicKey.toBase58()}`);
 
       const clientPubkey: PublicKey = await configureClientAccount({
-        accountSpaceSize: programStuff.size,
+        accountSpaceSize: calculator.size,
         connection,
         localKeypair,
-        programId: program.keypair.publicKey,
+        programId: programKeypair.publicKey,
         seed,
       });
       console.log("Configured client accounts.");
 
-      await pingProgram(config, clientPubkey, program);
+
+      const data = Buffer.alloc(calculatorInstructionLayout.span);
+      calculatorInstructionLayout.encode({
+        operation,
+        value
+      }, data);
+
+      await pingProgram(config, { clientPubkey, programPubkey: programKeypair.publicKey }, data);
     },
     async airdrop() {
       await connection.confirmTransaction(
@@ -155,16 +156,11 @@ async function configureClientAccount({
   return clientPubkey;
 }
 
-interface Program {
-  name: string;
-  keypair: Keypair;
-}
-
-async function pingProgram(config: Config, clientPubkey: PublicKey, program: Program) {
+async function pingProgram(config: Config, program: Program, data: Buffer) {
   const instruction = new TransactionInstruction({
-    keys: [{ pubkey: clientPubkey, isSigner: false, isWritable: true }],
-    programId: program.keypair.publicKey,
-    data: Buffer.alloc(0),
+    keys: [{ pubkey: program.clientPubkey, isSigner: false, isWritable: true }],
+    programId: program.programPubkey,
+    data,
   });
 
   await sendAndConfirmTransaction(

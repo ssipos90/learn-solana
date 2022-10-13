@@ -2,7 +2,7 @@
 
 set -eu
 
-SOLANA_PROGRAMS=("sum" "square")
+SOLANA_PROGRAMS=("calculator")
 
 function reset() {
   echo "resetting..."
