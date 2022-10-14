@@ -9,7 +9,7 @@ function reset() {
 
   rm -rf dist/program
   for deployed_program in $(solana program show --programs | grep '^[a-zA-Z0-9]\{44\}' | cut -d' ' -f1); do
-    echo $program:
+    echo $deployed_program:
     solana program close $deployed_program
   done
 }

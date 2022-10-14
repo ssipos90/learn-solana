@@ -23,12 +23,6 @@ fn process_instruction(
         return Err(ProgramError::IncorrectProgramId);
     }
 
-    msg!("Debug output:");
-    msg!("Account ID: {}", account.key);
-    msg!("Executable?: {}", account.executable);
-    msg!("Lamports: {:#?}", account.lamports);
-    msg!("Debug output complete.");
-
     let mut calc = Calculator::try_from_slice(&account.data.borrow())?;
 
     let instruction = CalculatorInstruction::try_from_slice(instruction_data)?;

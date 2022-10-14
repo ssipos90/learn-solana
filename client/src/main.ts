@@ -53,7 +53,7 @@ interface Program {
   const context: Record<string, Function> = {
     async run(seed: string, operation: CalculatorInstructionOperation, value: number) {
 
-      const programKeypair = await getProgram('calculator');
+      const programKeypair = await getProgramKeypair('calculator');
 
       console.log(`Program ID: ${programKeypair.publicKey.toBase58()}`);
 
@@ -73,7 +73,12 @@ interface Program {
         value
       }, data);
 
-      await pingProgram(config, { clientPubkey, programPubkey: programKeypair.publicKey }, data);
+      const program = {
+        clientPubkey,
+        programPubkey: programKeypair.publicKey
+      };
+
+      return pingProgram(config, program, data);
     },
     async airdrop() {
       await connection.confirmTransaction(
@@ -105,7 +110,7 @@ async function getLocalAccount(): Promise<Keypair> {
   return createKeypairFromFile(keypairPath);
 }
 
-async function getProgram(name: string): Promise<Keypair> {
+async function getProgramKeypair(name: string): Promise<Keypair> {
   return await createKeypairFromFile(
     path.join(PROGRAM_PATH, name + '-keypair.json')
   );
@@ -163,11 +168,9 @@ async function pingProgram(config: Config, program: Program, data: Buffer) {
     data,
   });
 
-  await sendAndConfirmTransaction(
+  return sendAndConfirmTransaction(
     config.connection,
     new Transaction().add(instruction),
     [config.localKeypair]
   );
-
-  console.log("Ping successful.");
 }
