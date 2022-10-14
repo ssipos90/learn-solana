@@ -29,7 +29,7 @@ function build () {
 
   for program in "${SOLANA_PROGRAMS[@]}"; do
     echo $program:
-    (cd "$program" && cargo build-bpf --bpf-out-dir=../dist/program)
+    (cd "$program" && cargo build-sbf --sbf-out-dir=../dist/program)
   done
 }
 
